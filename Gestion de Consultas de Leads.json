@@ -1,0 +1,881 @@
+{
+  "name": "Gestion de Consultas de Leads",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "dataSourceId": {
+          "__rl": true,
+          "value": "3d0f48df-cec2-8065-95ac-000bf6af81b4",
+          "mode": "list",
+          "cachedResultName": "AI Requests",
+          "cachedResultUrl": "https://app.notion.com/p/3d0f48dfcec2805aacb9e3f793393806"
+        }
+      },
+      "type": "n8n-nodes-base.notionTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -192,
+        416
+      ],
+      "id": "95195133-633f-4f00-8a05-603941bb7cc7",
+      "name": "Notion Trigger",
+      "credentials": {
+        "notionApi": {
+          "id": "7WYRwK3qBIFEWbnH",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "get",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        32,
+        416
+      ],
+      "id": "8414b6e9-4ce4-4a2e-acdc-86fed1495485",
+      "name": "Get Request",
+      "credentials": {
+        "notionApi": {
+          "id": "7WYRwK3qBIFEWbnH",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5dbb6449-e7e8-4033-b2f5-92f6ab62e30b",
+              "leftValue": "={{ $json.property_status }}",
+              "rightValue": "Pending",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "46317cdc-14e6-49ac-8bb7-e278298e12b5",
+              "leftValue": "={{ $json.property_input }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        256,
+        416
+      ],
+      "id": "1545b93c-d5b9-4543-a53a-59b36509c8a4",
+      "name": "Validate Request"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Sos el asistente de atención al cliente de Inmobiliaria Balbi, una inmobiliaria de Rosario, Argentina.\n\nTu tarea es redactar la respuesta a una consulta recibida de un cliente o interesado. Puede ser sobre una propiedad puntual, sobre servicios de la inmobiliaria (tasaciones, alquileres, ventas) o sobre trámites y requisitos.\n\nCONSULTA RECIBIDA:\n{{ $('Get Request').item.json.property_input }}\n\nINSTRUCCIONES:\n- Escribí en español rioplatense, en tono cordial y profesional, tratando de \"usted\".\n- Respondé solo lo que se pregunta, en un máximo de 120 palabras.\n- Si la consulta pide datos que no tenés (precio exacto, expensas, disponibilidad, metros), NO los inventes: indicá que un asesor va a confirmar ese dato a la brevedad.\n- Cerrá siempre invitando a coordinar una visita.\n- Devolvé \"solo\" el texto de la respuesta, sin encabezados ni explicaciones.\n- Si la consulta es una pregunta general sobre cómo funciona un servicio o trámite, explicala con tu conocimiento general del rubro inmobiliario. La restricción de no inventar aplica solo a datos específicos de una propiedad o de la empresa (precios, direcciones, disponibilidad, honorarios).",
+        "options": {
+          "maxIterations": 3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        928,
+        320
+      ],
+      "id": "97e07769-a3d2-4e11-983d-765c2102f4d8",
+      "name": "Generate AI Response",
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Get Request').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "AI Output|rich_text",
+              "textContent": "={{ $('Generate AI Response').item.json.output }}"
+            },
+            {
+              "key": "AI Model|select",
+              "selectValue": "Claude Haiku"
+            },
+            {
+              "key": "Status|status",
+              "statusValue": "Awaiting Approval"
+            },
+            {
+              "key": "Human Review|select",
+              "selectValue": "Pending Review"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        1280,
+        224
+      ],
+      "id": "43e204fb-d941-468e-bda6-073fc719426d",
+      "name": "Save AI Response",
+      "credentials": {
+        "notionApi": {
+          "id": "7WYRwK3qBIFEWbnH",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BKK9KHR8C",
+          "mode": "list",
+          "cachedResultName": "todo-n8n"
+        },
+        "text": "=🔎 Nueva solicitud pendiente de revisión  Solicitud: {{ $json.property_input }}  Respuesta IA: {{ $json.property_ai_output }}  Revisar en Notion: {{ $json.url }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        1504,
+        224
+      ],
+      "id": "0415ea3a-0725-45ab-bedb-2f89888ea04a",
+      "name": "Notify Reviewer",
+      "webhookId": "60c31a8a-ce1e-4bd0-b575-c4c2ec5da71d",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "HwWofHUySk1Bkxij",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1728,
+        224
+      ],
+      "id": "20658022-f27b-44f3-9834-f767478d5b56",
+      "name": "Review Delay",
+      "webhookId": "3e69a690-10eb-47e0-8172-d026e1f0eb9b"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "get",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Notion Trigger').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        1952,
+        144
+      ],
+      "id": "5abc7a1d-a617-47da-81fc-550670f45fbf",
+      "name": "Refresh Request",
+      "credentials": {
+        "notionApi": {
+          "id": "7WYRwK3qBIFEWbnH",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "20496bf7-b0ce-48a6-9c64-679f122fcef0",
+              "leftValue": "={{ $json.property_human_review }}",
+              "rightValue": "Approved",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2176,
+        144
+      ],
+      "id": "1c3e759e-0666-4695-a7c7-7d25c4cb5013",
+      "name": "Check Approval"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Notion Trigger').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Final Output|rich_text",
+              "textContent": "={{ $('Refresh Request').item.json.property_ai_output }}"
+            },
+            {
+              "key": "Status|status",
+              "statusValue": "Completed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        2400,
+        -48
+      ],
+      "id": "04ff36b3-64da-4766-8d2e-c6fb633c5067",
+      "name": "Save Final Settings",
+      "credentials": {
+        "notionApi": {
+          "id": "7WYRwK3qBIFEWbnH",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Get Request').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status",
+              "statusValue": "Error"
+            },
+            {
+              "key": "Error|rich_text",
+              "textContent": "={{ $json.error }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        1280,
+        416
+      ],
+      "id": "8e895a08-0755-4472-9b08-e4b97393c224",
+      "name": "Handle AI ERROR",
+      "credentials": {
+        "notionApi": {
+          "id": "7WYRwK3qBIFEWbnH",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "=claude-haiku-4-5-20251001",
+          "mode": "id"
+        },
+        "options": {
+          "maxTokensToSample": 2048
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        1008,
+        544
+      ],
+      "id": "32da7738-440f-4b4a-af5d-a02dc2ab2144",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "IntGeWHhh5txHNmz",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Get Request').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status",
+              "statusValue": "Error"
+            },
+            {
+              "key": "Error|rich_text",
+              "textContent": "Datos incompletos: falta el texto de la consulta o el estado no es Pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        480,
+        512
+      ],
+      "id": "3e47bbef-aa86-43ea-bed2-1d894a00b168",
+      "name": "Handle Validation Error",
+      "credentials": {
+        "notionApi": {
+          "id": "7WYRwK3qBIFEWbnH",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0cf0ffcb-ec38-4ade-b239-10d4e45763f5",
+              "leftValue": "={{ $('Refresh Request').item.json.property_human_review }}",
+              "rightValue": "Rejected",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2400,
+        240
+      ],
+      "id": "9d09b759-3d97-4749-8967-ba7f0547bb16",
+      "name": "Check Rejected"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Notion Trigger').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status",
+              "statusValue": "Rejected"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        2624,
+        144
+      ],
+      "id": "a06c0383-8aaf-44d4-9699-925ff3d8fdbf",
+      "name": "Handle Rejected",
+      "credentials": {
+        "notionApi": {
+          "id": "7WYRwK3qBIFEWbnH",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const intentos = $runIndex + 1;\nreturn [{ json: { intentos } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2624,
+        336
+      ],
+      "id": "d73b257e-f44d-4306-bfaa-b3c42ebf208c",
+      "name": "Retry Counter"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Notion Trigger').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status",
+              "statusValue": "Timeout"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        3072,
+        416
+      ],
+      "id": "01bfdb32-ebbb-4312-9d61-772181c40dff",
+      "name": "Handle Timeout",
+      "credentials": {
+        "notionApi": {
+          "id": "7WYRwK3qBIFEWbnH",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0BKK9KHR8C",
+          "mode": "list",
+          "cachedResultName": "todo-n8n"
+        },
+        "text": "=✅ Respuesta aprobada y enviada al cliente\n\nConsulta: {{ $('Get Request').item.json.property_input }}\n\nRespuesta final: {{ $('Refresh Request').item.json.property_ai_output }}",
+        "otherOptions": {
+          "thread_ts": {
+            "replyValues": {
+              "thread_ts": "={{ $('Notify Reviewer').item.json.message.ts }}"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2624,
+        -48
+      ],
+      "id": "1dd4baf6-6168-4e09-a4d6-a4af2c533f5b",
+      "name": "Send Approved Review",
+      "webhookId": "60c31a8a-ce1e-4bd0-b575-c4c2ec5da71d",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "HwWofHUySk1Bkxij",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Get Request').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status",
+              "statusValue": "Processing"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 3,
+      "position": [
+        480,
+        320
+      ],
+      "id": "c8c293c2-8df2-4539-ab8e-2fa86376f6ce",
+      "name": "Set Processing Status",
+      "credentials": {
+        "notionApi": {
+          "id": "7WYRwK3qBIFEWbnH",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        320
+      ],
+      "id": "50c8c6bf-ffa4-4be0-ae49-d183947c17d4",
+      "name": "Processing Check Delay",
+      "webhookId": "02bf65b0-a5fd-47c7-8900-1d87b57189cb"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b56f1959-d963-4809-9ddb-bc65cb9d56cb",
+              "leftValue": "={{ $json.intentos }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2848,
+        416
+      ],
+      "id": "74028a4e-a86b-4716-a5af-1eb89de6c639",
+      "name": "Check Retries"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Notion Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Request": {
+      "main": [
+        [
+          {
+            "node": "Validate Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Request": {
+      "main": [
+        [
+          {
+            "node": "Set Processing Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate AI Response": {
+      "main": [
+        [
+          {
+            "node": "Save AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle AI ERROR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save AI Response": {
+      "main": [
+        [
+          {
+            "node": "Notify Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Reviewer": {
+      "main": [
+        [
+          {
+            "node": "Review Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Review Delay": {
+      "main": [
+        [
+          {
+            "node": "Refresh Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refresh Request": {
+      "main": [
+        [
+          {
+            "node": "Check Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Approval": {
+      "main": [
+        [
+          {
+            "node": "Save Final Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate AI Response",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle AI ERROR": {
+      "main": [
+        []
+      ]
+    },
+    "Check Rejected": {
+      "main": [
+        [
+          {
+            "node": "Handle Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Retry Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Rejected": {
+      "main": [
+        []
+      ]
+    },
+    "Retry Counter": {
+      "main": [
+        [
+          {
+            "node": "Check Retries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Final Settings": {
+      "main": [
+        [
+          {
+            "node": "Send Approved Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Processing Status": {
+      "main": [
+        [
+          {
+            "node": "Processing Check Delay",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processing Check Delay": {
+      "main": [
+        [
+          {
+            "node": "Generate AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Retries": {
+      "main": [
+        [
+          {
+            "node": "Review Delay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Handle Timeout",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "692b53b6-386a-4c83-8f1f-86b51b491548",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d396b4afb37cb66cbb7804c56432cc0c06c8f299579eaab7ffd66ab275bdfcba"
+  },
+  "nodeGroups": [],
+  "id": "JfYzUDJNj1dRaWcI",
+  "tags": []
+}
