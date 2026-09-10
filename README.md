@@ -27,6 +27,9 @@ https://evanescent-silkworm-a3b.notion.site/AI-Dashboard-3d5f48dfcec2808f8420c14
 **Base de datos en modo lectura**
 https://evanescent-silkworm-a3b.notion.site/Sistema-AI-3d0f48dfcec280e78d6ef16ffb623ea4
 
+**Video demo**
+https://drive.google.com/file/d/14iUa4K3GMzOddmEJ5DfGpizCu6lf0LtI/view?usp=sharing
+
 ---
 
 ## Dónde está cada criterio
